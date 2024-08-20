@@ -1,0 +1,4 @@
+.DS_Store
+env
+.env
+task2-3/**/__pycache__/
