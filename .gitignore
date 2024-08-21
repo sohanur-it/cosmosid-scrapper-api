@@ -1,5 +1,4 @@
 .DS_Store
 env
-.env
 task2-3/**/__pycache__/
 task2-3/postgres-data
