@@ -9,8 +9,8 @@ from rest_framework import status
 class TaxonomyViewSet(viewsets.ModelViewSet):
     queryset = Taxonomy.objects.all()
     serializer_class = TaxonomySerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    # authentication_classes = [JWTAuthentication]
+    # permission_classes = [IsAuthenticated]
 
     def retrieve(self, request, pk=None):
         """
