@@ -3,10 +3,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.common.exceptions import TimeoutException
 import time
 import os
 
-# Set up Chrome options to handle downloads
+# Set up Chrome options
 def setup_chrome_driver(download_dir):
     chrome_options = webdriver.ChromeOptions()
     prefs = {
@@ -60,18 +61,7 @@ def close_post_login_popup(driver):
     close_button_post_login.click()
     print("Post-login pop-up closed successfully.")
 
-
-
-def click_all_options(driver):
-    print('click on click options')
-    div_element = WebDriverWait(driver, 10).until(
-        EC.presence_of_all_elements_located((By.ID, "analysis-select"))
-    )[0]
-    div_element.click()
-    time.sleep(2)
-    check_html = div_element.get_attribute('innerHTML')
-    if check_html == 'Bacteria':
-        print('go to taxonomy switcher')
+def click_on_taxonomy_level(driver):
         div_element = WebDriverWait(driver, 10).until(
                 EC.presence_of_all_elements_located((By.ID, "artifact-select-button-biom"))
         )[0]
@@ -105,6 +95,47 @@ def click_all_options(driver):
                 handle_export(driver)
                 time.sleep(2)
 
+def click_all_options(driver):
+    print('click on click options')
+    div_element = WebDriverWait(driver, 10).until(
+        EC.presence_of_all_elements_located((By.ID, "analysis-select"))
+    )[0]
+    div_element.click()
+    time.sleep(2)
+    div_element = WebDriverWait(driver, 10).until(
+                EC.presence_of_all_elements_located((By.ID, "analysis-select"))
+        )[0]
+    div_element.click()
+    time.sleep(2)
+    ul_elements = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'ul.MuiList-root.MuiList-padding.MuiMenu-list.css-r8u8y9')))
+   
+    if ul_elements:
+    
+        last_ul_element = ul_elements[-1]
+  
+        li_elements = last_ul_element.find_elements(By.CSS_SELECTOR, 'li.MuiButtonBase-root.MuiMenuItem-root.MuiMenuItem-gutters.MuiMenuItem-root.MuiMenuItem-gutters.css-2aj19w')
+        print(len(li_elements))
+        for i in range(len(li_elements)):
+            if i>0:
+                # after first iteration, reload the full dom to get access
+                div_element = WebDriverWait(driver, 10).until(
+                        EC.presence_of_all_elements_located((By.ID, "analysis-select"))
+                )[0]
+                div_element.click()
+                time.sleep(2)
+            ul_elements = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'ul.MuiList-root.MuiList-padding.MuiMenu-list.css-r8u8y9')))
+            last_ul_element = ul_elements[-1]
+            li_elements = last_ul_element.find_elements(By.CSS_SELECTOR, 'li.MuiButtonBase-root.MuiMenuItem-root.MuiMenuItem-gutters.MuiMenuItem-root.MuiMenuItem-gutters.css-2aj19w')
+            li = li_elements[i]
+            li.click()
+            print(f'Clicked on results: {li.text}')
+            if li.text == 'Bacteria':
+                print('go to taxonomy switchen')
+                click_on_taxonomy_level(driver=driver)
+            else:
+                print('download the file')
+                handle_export(driver)
+            time.sleep(2)
 
 def interact_with_table(driver):
     time.sleep(1)
@@ -154,16 +185,14 @@ def interact_with_table(driver):
                     )
                     print(f'Downloaded file: ({sub_row_index + 1}) -> {a_element.text}')
 
-                    # Perform download action (or any other required action)
-
                     #comment to check
                     second_td.click()
-                    time.sleep(2)  # Wait for the page to update
+                    time.sleep(2)
 
                     click_all_options(driver=driver)
 
                     driver.back()
-                    time.sleep(2)  # Wait for the page to load back
+                    time.sleep(2)  
 
                 except Exception as e:
                     print(f"Error interacting with sub row {sub_row_index}: {e}")
@@ -187,22 +216,17 @@ def get_table_rows(driver):
 # Handle the export functionality
 def handle_export(driver):
     try:
-        export_button = WebDriverWait(driver, 10).until(
+        export_button = WebDriverWait(driver, 2).until(
             EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Export current results')]"))
         )
         export_button.click()
         print("Export button clicked.")
-        time.sleep(2)  
+        time.sleep(2)
+    except TimeoutException:
+        print("Export button not found, skipping export.")
     except Exception as e:
-        print(f"Failed to find or click the export button: {e}")
+        print(f"An error occurred: {e}")
 
-# Verify the download
-def verify_download(download_dir):
-    downloaded_files = os.listdir(download_dir)
-    if downloaded_files:
-        print(f"Downloaded files: {downloaded_files}")
-    else:
-        print("No files downloaded.")
 
 # Main execution flow
 def main():
@@ -212,7 +236,6 @@ def main():
     try:
         login(driver, "demo_estee2@cosmosid.com", "xyzfg321")
         interact_with_table(driver)
-        # verify_download(download_dir)
     finally:
         input("Press Enter to close the browser...")
         driver.quit()
